@@ -1,4 +1,4 @@
-use crate::{Errors, J1900_OFFSET, MJD_OFFSET, SECONDS_PER_DAY};
+use crate::{Errors, J1900_OFFSET, J2000_OFFSET, MJD_OFFSET, SECONDS_PER_DAY};
 use std::ops::Sub;
 
 /// From https://www.ietf.org/timezones/data/leap-seconds.list .
@@ -372,7 +372,12 @@ impl Epoch {
 
     // Returns the SPICE ephemeris time in JDE since JD Epoch
     pub fn as_jde_et_days(self) -> f64 {
-        self.as_jde_tt_days() + 0.000_935 / SECONDS_PER_DAY
+        use std::f64::consts::PI;
+        let et_epoch_s = 3_155_716_800.0;
+        let centuries_since_j2ktt =
+            (self.as_tt_seconds() - et_epoch_s) / (SECONDS_PER_DAY * 36525.0);
+        let g_rad = 2.0 * PI * (357.528 + 35_999.050 * centuries_since_j2ktt) / 360.0;
+        self.as_jde_tt_days() + 0.001_658 * (g_rad + 0.0167 * g_rad.sin()).sin() / SECONDS_PER_DAY
     }
 
     /// Increment this epoch by the number of days provided.
@@ -796,9 +801,12 @@ fn spice_et() {
     // And the 32.184 for the TT/TAI offset
     let sp_ex = Epoch::from_et_seconds(66_312_032.184_935_02);
     let sp_jde_days = 2_452_312.499_629_6 + (32.0 + 32.184) / 86400.0;
-    let err_days = sp_ex.as_jde_et_days() - sp_jde_days;
+    // TODO: Use spice to get more than the above digits, e.g. use 32 digits instead of 9!
+    // Also add the JDE ET computation for all of the previous examples.
+    // let err_days = sp_ex.as_jde_et_days() - sp_jde_days;
+    let err_days = sp_ex.as_et_seconds() / 86400. + MJD_OFFSET + J2000_OFFSET - sp_jde_days;
     // Check that there is less than 10ms difference.
-    assert!((err_days * SECONDS_PER_DAY).abs() < 1e-2);
+    assert!(dbg!(err_days * SECONDS_PER_DAY).abs() < 1e-2);
     let sp_ex_jde = Epoch::from_jde_et(sp_jde_days);
     assert!((sp_ex_jde.as_et_seconds() - sp_ex.as_et_seconds()).abs() < 1e-2);
 }
