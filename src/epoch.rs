@@ -775,6 +775,13 @@ fn spice_et() {
     assert!(
         (sp_ex.as_tai_seconds() - Epoch::from_et_seconds(expect_et).as_tai_seconds()).abs() < 1e-5
     );
+    /*
+    In GMAT (with their own definition of mod julian)
+    UTC Greg 07 Feb 2002 11:22:33.000 <=> TBD Mod Julian 22312.97473593693 <=> TT Mod Julian 22312.97473592593
+    UTC Greg 07 Feb 1996 11:22:33.000 <=> TDB Mod Julian 20120.97471278866
+    TDB Mod Julian GMAT: 28849.50037249893 <=> UTC Greg 31 Dec 2019 23:59:23.000 <=> TAI Mod Julian 28849.5 <=> TAI Greg 01 Jan 2020 00:00:00.000 /!\ GMAT might not have the latest leap seconds!
+    */
+    dbg!(sp_ex.as_jde_et_days() - (22312.97473593693 + 2430000.0));
     // Second example
     let sp_ex = Epoch::from_gregorian_utc_at_midnight(2002, 2, 7);
     let expect_et = 66_312_064.184_938_76;
@@ -801,10 +808,7 @@ fn spice_et() {
     // And the 32.184 for the TT/TAI offset
     let sp_ex = Epoch::from_et_seconds(66_312_032.184_935_02);
     let sp_jde_days = 2_452_312.499_629_6 + (32.0 + 32.184) / 86400.0;
-    // TODO: Use spice to get more than the above digits, e.g. use 32 digits instead of 9!
-    // Also add the JDE ET computation for all of the previous examples.
-    // let err_days = sp_ex.as_jde_et_days() - sp_jde_days;
-    let err_days = sp_ex.as_et_seconds() / 86400. + MJD_OFFSET + J2000_OFFSET - sp_jde_days;
+    let err_days = sp_ex.as_jde_et_days() - sp_jde_days;
     // Check that there is less than 10ms difference.
     assert!(dbg!(err_days * SECONDS_PER_DAY).abs() < 1e-2);
     let sp_ex_jde = Epoch::from_jde_et(sp_jde_days);
