@@ -61,7 +61,7 @@ const USUAL_DAYS_PER_MONTH: [u8; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 
 /// Defines an Epoch in TAI (temps atomique international) in seconds past 1900 January 01 at midnight (like the Network Time Protocol).
 ///
 /// Refer to the appropriate functions for initializing this Epoch from different time systems or representations.
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd, Hash, Eq)]
 pub struct Epoch(Duration);
 
 impl Sub for Epoch {

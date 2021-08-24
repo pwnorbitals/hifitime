@@ -18,7 +18,7 @@ const SECONDS_PER_DAY_U: u128 = 86_400;
 const ONE: u128 = 1_u128;
 
 /// Defines generally usable durations for high precision math with Epoch (all data is stored in seconds)
-#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Hash, Eq)]
 pub struct Duration(Decimal);
 
 impl<'de> Deserialize<'de> for Duration {
