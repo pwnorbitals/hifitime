@@ -12,6 +12,9 @@ use std::fmt;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
 
+extern crate rand;
+use self::rand::{distributions::{Distribution, Standard},Rng};
+
 const TT_OFFSET_S: f64 = 32.184;
 const ET_OFFSET_S: f64 = 32.184_935;
 
@@ -149,6 +152,12 @@ impl Add<TimeUnit> for Epoch {
 impl AddAssign<Duration> for Epoch {
     fn add_assign(&mut self, duration: Duration) {
         *self = *self + duration;
+    }
+}
+
+impl Distribution<Duration> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Duration {
+        rng.gen::<Duration>()
     }
 }
 
