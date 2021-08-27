@@ -2,18 +2,18 @@ extern crate regex;
 extern crate serde;
 extern crate serde_derive;
 
+extern crate rand;
+use self::rand::{distributions::{uniform::{UniformSampler, SampleBorrow}, Distribution, Standard},Rng};
+
 use self::regex::Regex;
 use self::serde::{de, Deserialize, Deserializer};
-use crate::duration::{Duration, TimeUnit};
+use crate::{UniformDurationSampler, duration::{Duration, TimeUnit}};
 use crate::{
     Errors, TimeSystem, DAYS_PER_CENTURY, ET_EPOCH_S, J1900_OFFSET, MJD_OFFSET, SECONDS_PER_DAY,
 };
 use std::fmt;
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
-
-extern crate rand;
-use self::rand::{distributions::{Distribution, Standard},Rng};
 
 const TT_OFFSET_S: f64 = 32.184;
 const ET_OFFSET_S: f64 = 32.184_935;
@@ -155,11 +155,6 @@ impl AddAssign<Duration> for Epoch {
     }
 }
 
-impl Distribution<Duration> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Duration {
-        rng.gen::<Duration>()
-    }
-}
 
 impl Epoch {
     /// Initialize an Epoch from the provided TAI seconds since 1900 January 01 at midnight
@@ -985,6 +980,44 @@ impl fmt::Display for Epoch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.as_gregorian_tai_str())
     }
+}
+
+impl Distribution<Epoch> for rand::distributions::Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Epoch {
+        Epoch(rng.gen::<Duration>())
+    }
+}
+
+pub struct UniformEpochSampler {
+    inner: UniformDurationSampler,
+}
+
+impl UniformSampler for UniformEpochSampler {
+    type X = Epoch;
+    fn new<B1, B2>(low: B1, high: B2) -> Self
+        where B1: SampleBorrow<Self::X> + Sized,
+              B2: SampleBorrow<Self::X> + Sized
+    {
+        UniformEpochSampler {
+            inner: UniformDurationSampler::new(
+                low.borrow().0, 
+                high.borrow().0
+            ),
+        }
+    }
+    fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
+        where B1: SampleBorrow<Self::X> + Sized,
+              B2: SampleBorrow<Self::X> + Sized
+    {
+        UniformSampler::new(low, high)
+    }
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
+        Epoch(self.inner.sample(rng))
+    }
+}
+
+impl rand::distributions::uniform::SampleUniform for Epoch {
+    type Sampler = UniformEpochSampler;
 }
 
 /// Returns true if the provided Gregorian date is valid. Leap second days may have 60 seconds.

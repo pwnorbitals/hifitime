@@ -2,6 +2,12 @@ extern crate regex;
 extern crate serde;
 extern crate serde_derive;
 
+
+use fraction::{GenericFraction, GenericDecimal};
+
+extern crate rand;
+use self::rand::{distributions::{Distribution, Standard, uniform::{UniformFloat, UniformSampler, SampleBorrow}},Rng};
+
 use self::regex::Regex;
 use self::serde::{de, Deserialize, Deserializer};
 use crate::fraction::ToPrimitive;
@@ -438,6 +444,49 @@ impl FromStr for Duration {
             ))),
         }
     }
+}
+
+
+impl Distribution<Duration> for rand::distributions::Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Duration {
+        rng.gen::<Duration>()
+    }
+}
+
+pub struct UniformDurationSampler {
+    inner: UniformFloat<f64>,
+}
+
+impl UniformSampler for UniformDurationSampler {
+    type X = Duration;
+    fn new<B1, B2>(low: B1, high: B2) -> Self
+        where B1: SampleBorrow<Self::X> + Sized,
+              B2: SampleBorrow<Self::X> + Sized
+    {
+        UniformDurationSampler {
+            inner: UniformFloat::<f64>::new(
+                low.borrow().0.to_f64().unwrap(), 
+                high.borrow().0.to_f64().unwrap()
+            ),
+        }
+    }
+    fn new_inclusive<B1, B2>(low: B1, high: B2) -> Self
+        where B1: SampleBorrow<Self::X> + Sized,
+              B2: SampleBorrow<Self::X> + Sized
+    {
+        UniformSampler::new(low, high)
+    }
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Self::X {
+        Duration(
+            GenericDecimal::from_fraction(
+                GenericFraction::from(self.inner.sample(rng))
+            )
+        )
+    }
+}
+
+impl rand::distributions::uniform::SampleUniform for Duration {
+    type Sampler = UniformDurationSampler;
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
